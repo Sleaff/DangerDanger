@@ -103,8 +103,8 @@ class Player(object):
         self.exp = 0
         self.next_level = 10
         
-    def exp_gain(self):
-        self.exp += 1
+    def exp_gain(self, exp=1):
+        self.exp += exp
         if self.exp >= self.next_level:
             self.level += 1
             self.exp = abs(self.next_level - self.exp)
@@ -282,13 +282,26 @@ class PickUp(object):
         self.y = y
         self.radius = radius
         self.pickup_type = pickup_type
-        self.surface = pygame.Surface((self.radius, self.radius))
+        self.vel = VEL
+        self.exp = 5
+        # self.surface = pygame.Surface((self.radius, self.radius))
         self.rect = pygame.Rect(self.x, self.y, self.radius, self.radius)
         # self.rect = pygame.draw.circle(self.surface, (250,0,0), (self.x, self.y), self.radius)
         
     def draw(self, screen):
         # screen.blit(self.surface, self.rect)
-        pygame.draw.ellipse(screen, (0,0,250), self.rect)
+        self.rect = pygame.Rect(self.x, self.y, self.radius, self.radius)
+        pygame.draw.ellipse(screen, (0,200,230), self.rect)
+        
+    def movement(self, key_pressed):
+        if key_pressed[pygame.K_w]:
+            self.y += self.vel
+        elif key_pressed[pygame.K_s]:
+            self.y -= self.vel
+        if key_pressed[pygame.K_a]:
+            self.x += self.vel
+        elif key_pressed[pygame.K_d]:
+            self.x -= self.vel
 
 class Background(object):
     def __init__(self, x, y):
@@ -334,29 +347,50 @@ class Game(object):
         self.clock = pygame.time.Clock()
         self.x = width / 2
         self.y = height / 2
+        self.time = 0   # seconds
+        self.font_size = 50
 
-    def draw_screen(self, player, bg, enemies, bullets, pickup):
+    def draw_screen(self, player, bg, enemies, bullets, pickups):
         bg.draw(screen)
+        
+        for pickup in pickups:
+            pickup.draw(screen)
+        
         player.draw(screen)
-        # enemy.draw(screen)
+        
         for enemy in enemies:
             enemy.draw(screen)
+            
         for bullet in bullets:
             bullet.draw(screen)
-        pickup.draw(screen)
+            
+        TEXT_FONT = pygame.font.SysFont('comicsans', self.font_size)
+        time_seconds = TEXT_FONT.render("Time: " + str(self.time), 1, (255,255,255))
+        screen.blit(time_seconds, (width/2 -  self.font_size/2, 10))
+            
         pygame.display.update()
+        
+    def choose_enemy_spawn_points(self):
+        rand = random.randint(1,4)
+        if rand == 1:   # left boarder random point
+            spawn = (0,random.randint(0, SCREEN_HEIGHT))
+        elif rand == 2: # right border random point
+            spawn = (SCREEN_WIDTH, random.randint(0, SCREEN_HEIGHT))
+        elif rand == 3: # top border random point
+            spawn = (random.randint(0, SCREEN_WIDTH), 0)
+        else:           # bottom border random point
+            spawn = (random.randint(0, SCREEN_WIDTH), SCREEN_HEIGHT)
+        return spawn
 
     def main(self, screen):
         player = Player(width / 2, height / 2, player_surface, player_surface_mirror,
                         player_walk_frames, player_walk_frames_mirror)
         bg = Background(width / 2, height / 2)
-        # enemy = Enemy(50 , height / 2, enemy_frames, enemy_frames_mirror)
         enemies = []     # create enemy list and make it work
-        # for i in range(5):
-        #     enemies.append(Enemy(random.randint(0, width) , random.randint(0, height), enemy_frames, enemy_frames_mirror))
         bullets = []
-        pickup = PickUp(100, 100, 50, pickup_type=1)
+        pickups = []
         
+        clock = pygame.time.get_ticks()
 
         PLAYER_WALK_ANIMATION = pygame.USEREVENT
         pygame.time.set_timer(PLAYER_WALK_ANIMATION, 50)
@@ -369,12 +403,18 @@ class Game(object):
         
         enemy_spawn_speed = 1000
         SPAWN_ENEMY = pygame.USEREVENT + 3
-        pygame.time.set_timer(SPAWN_ENEMY, 1000)
+        pygame.time.set_timer(SPAWN_ENEMY, enemy_spawn_speed)
+        
+        SPAWN_PICKUP = pygame.USEREVENT + 4
+        pygame.time.set_timer(SPAWN_PICKUP, 5000)
+        
+        CLOCK = pygame.USEREVENT + 5
+        pygame.time.set_timer(CLOCK, 1000)
 
         """ Main Game Loop """
         while True:
             self.clock.tick(60)
-            self.draw_screen(player, bg, enemies, bullets, pickup)
+            self.draw_screen(player, bg, enemies, bullets, pickups)
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -420,16 +460,16 @@ class Game(object):
                             bullets.remove(bullet)
                             
                 if event.type == SPAWN_ENEMY:
-                    spawn_x = random.randint(-50, SCREEN_WIDTH + 50)
-                    spawn_y = random.randint(-50, SCREEN_HEIGHT + 50)
-                    spawn_points = [(0,0),(SCREEN_WIDTH,SCREEN_HEIGHT),(0, SCREEN_HEIGHT),(SCREEN_WIDTH, 0),
-                                    (0, SCREEN_HEIGHT / 2),(SCREEN_WIDTH / 2, 0),(SCREEN_WIDTH / 2, SCREEN_HEIGHT),(SCREEN_WIDTH, SCREEN_HEIGHT / 2),
-                                    (0, SCREEN_HEIGHT / 4),(SCREEN_WIDTH / 4, 0),(SCREEN_WIDTH / 4, SCREEN_HEIGHT),(SCREEN_WIDTH, SCREEN_HEIGHT / 4), 
-                                    (0, SCREEN_HEIGHT / 8),(SCREEN_WIDTH / 8, 0),(SCREEN_WIDTH / 8, SCREEN_HEIGHT),(SCREEN_WIDTH, SCREEN_HEIGHT / 8)]
-                    spawn = random.choice(spawn_points)
+                    spawn = self.choose_enemy_spawn_points()
                     enemies.append(Enemy(spawn[0], spawn[1], enemy_frames, enemy_frames_mirror))
                 
+                if event.type == SPAWN_PICKUP:
+                    spawn = self.choose_enemy_spawn_points()
+                    pickups.append(PickUp(spawn[0], spawn[1], 20, pickup_type=1))
 
+                if event.type == CLOCK:
+                    self.time = int((pygame.time.get_ticks() - clock) / 1000)
+                
             key_pressed = pygame.key.get_pressed()     # Movement
             player.movement(key_pressed)
             bg.movement(key_pressed)
@@ -442,7 +482,8 @@ class Game(object):
                     enemies.remove(enemy)
                 if enemy.rect.colliderect(player):
                     player.collide(enemy.damage)
-                    print(player.health)
+                    print(f'Remaining health: {player.health}')
+                    break
                     
             # handle bullets
             for bullet in bullets:
@@ -454,7 +495,16 @@ class Game(object):
                         bullets.remove(bullet)
                         player.exp_gain()
                         break       # makes sure i don't try to remove bullet that has already been removed
-
+            
+            # handle pickups
+            for pickup in pickups:
+                pickup.movement(key_pressed)
+                
+                if pickup.rect.colliderect(player):
+                    player.exp_gain(pickup.exp)
+                    pickups.remove(pickup)
+                    print("you picked up 5 exp")
+                    break
 
 if __name__ == "__main__":
     Game(0).main(screen)
