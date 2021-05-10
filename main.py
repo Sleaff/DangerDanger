@@ -10,34 +10,21 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("DangerDanger")
 
 # Surfaces
-player_surface = pygame.transform.scale(
-    pygame.image.load('assets/idle.png').convert_alpha(), (40, 50))
+player_surface = pygame.image.load('assets/ownwalk/idle.png').convert_alpha()
 player_surface_mirror = pygame.transform.flip(
     player_surface, True, False)
-player_walk_01 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk01.png').convert_alpha(), (40, 50))
-player_walk_02 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk02.png').convert_alpha(), (40, 50))
-player_walk_03 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk03.png').convert_alpha(), (40, 50))
-player_walk_04 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk04.png').convert_alpha(), (40, 50))
-player_walk_05 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk05.png').convert_alpha(), (40, 50))
-player_walk_06 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk06.png').convert_alpha(), (40, 50))
-player_walk_07 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk07.png').convert_alpha(), (40, 50))
-player_walk_08 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk08.png').convert_alpha(), (40, 50))
-player_walk_09 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk09.png').convert_alpha(), (40, 50))
-player_walk_10 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk10.png').convert_alpha(), (40, 50))
-player_walk_11 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk11.png').convert_alpha(), (40, 50))
-player_walk_12 = pygame.transform.scale(
-    pygame.image.load('assets/walk/walk12.png').convert_alpha(), (40, 50))
+player_walk_01 = pygame.image.load('assets/ownwalk/walk01.png').convert_alpha()
+player_walk_02 = pygame.image.load('assets/ownwalk/walk02.png').convert_alpha()
+player_walk_03 = pygame.image.load('assets/ownwalk/walk03.png').convert_alpha()
+player_walk_04 = pygame.image.load('assets/ownwalk/walk04.png').convert_alpha()
+player_walk_05 = pygame.image.load('assets/ownwalk/walk05.png').convert_alpha()
+player_walk_07 = pygame.image.load('assets/ownwalk/walk07.png').convert_alpha()
+player_walk_08 = pygame.image.load('assets/ownwalk/walk08.png').convert_alpha()
+player_walk_06 = pygame.image.load('assets/ownwalk/walk06.png').convert_alpha()
+player_walk_09 = pygame.image.load('assets/ownwalk/walk09.png').convert_alpha()
+player_walk_10 = pygame.image.load('assets/ownwalk/walk10.png').convert_alpha()
+player_walk_11 = pygame.image.load('assets/ownwalk/walk11.png').convert_alpha()
+player_walk_12 = pygame.image.load('assets/ownwalk/walk12.png').convert_alpha()
 player_walk_frames = [player_walk_01, player_walk_02, player_walk_03, player_walk_04, 
                       player_walk_05, player_walk_06, player_walk_07, player_walk_08,
                       player_walk_09, player_walk_10, player_walk_11, player_walk_12]
@@ -45,6 +32,8 @@ player_walk_frames_mirror = []
 for frame in player_walk_frames:
     mirror = pygame.transform.flip(frame, True, False)
     player_walk_frames_mirror.append(mirror)
+    
+player_dead = pygame.image.load('assets/ownwalk/dead.png').convert_alpha()
 
 enemy_01 = pygame.transform.scale(
     pygame.image.load('assets/Enemy/ghostbob0001.png').convert_alpha(), (40, 50))
@@ -111,8 +100,6 @@ class Player(object):
             self.next_level = int(self.next_level*1.5)
             print(f"level up - {self.level}")
             return True
-        print(f"current exp - {self.exp}")
-        print(f"needed exp - {self.next_level}")
         return False
         
     def immune(self):
@@ -124,6 +111,9 @@ class Player(object):
         self.last_collision_time = pygame.time.get_ticks()
 
     def draw(self, screen):
+        if self.health <= 0:
+            screen.blit(player_dead, self.rect)
+            return
         if not (self.up or self.down or self.left or self.right):
             if self.direction == 0:
                 self.rect = self.surface.get_rect(center = (self.x, self.y))
@@ -188,7 +178,7 @@ class Enemy(object):
         self.mirror_frames = mirror_frames
         self.health = 1
         self.rect = self.frames[self.index].get_rect(center = (self.x, self.y))
-        self.damage = 1
+        self.damage = 2
 
     def draw(self, screen):
         if self.direction == 1:
@@ -218,21 +208,14 @@ class Enemy(object):
         self.rect.y = int(self.y)
         if self.x < player.x:
             self.direction = 0
-            # self.x += self.speed
         if self.x > player.x:
             self.direction = 1
-            # self.x -= self.speed
-        # if self.y < player.y:
-        #     self.y += self.speed
-        # if self.y > player.y:
-        #     self.y -= self.speed
-        
+
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, enemy_x, enemy_y):
         pygame.sprite.Sprite.__init__(self)
         self.x = SCREEN_WIDTH / 2
         self.y = SCREEN_HEIGHT / 2
-        # self.rect = self.image.get_rect(center = (self.x, self.y))
         self.speed = 14
         self.angle = math.atan2(enemy_y - self.y, enemy_x - self.x)
         self.degree = (180 / math.pi) * -self.angle
@@ -246,15 +229,9 @@ class Bullet(pygame.sprite.Sprite):
         self.image = pygame.transform.rotate(pygame.transform.scale(
             pygame.image.load('assets/bullet4.png').convert_alpha(), (
                 self.width,self.height)), self.degree)
-        # self.surface = pygame.Surface((self.width, self.height))
         self.rect = self.image.get_rect(center = (self.x, self.y))
-        # self.rect = pygame.Rect(self.x, self.y, self.width, self.height)
 
     def draw(self, screen):
-        # bullet = pygame.Rect(int(self.x), int(self.y), 10, 10)
-        # pygame.draw.rect(screen, (250,0,0), self.rect)
-        # pygame.transform.rotate(self.image, self.degree)
-        # pygame.draw.ellipse(self.surface, (250,0,0), self.rect)
         screen.blit(self.image, self.rect)
         
     def movement(self, key_pressed):
@@ -284,12 +261,9 @@ class PickUp(object):
         self.pickup_type = pickup_type
         self.vel = VEL
         self.exp = 5
-        # self.surface = pygame.Surface((self.radius, self.radius))
         self.rect = pygame.Rect(self.x, self.y, self.radius, self.radius)
-        # self.rect = pygame.draw.circle(self.surface, (250,0,0), (self.x, self.y), self.radius)
         
     def draw(self, screen):
-        # screen.blit(self.surface, self.rect)
         self.rect = pygame.Rect(self.x, self.y, self.radius, self.radius)
         pygame.draw.ellipse(screen, (0,200,230), self.rect)
         
@@ -303,6 +277,65 @@ class PickUp(object):
         elif key_pressed[pygame.K_d]:
             self.x -= self.vel
 
+class PlayerDeathParticle(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.velocity_x = random.randint(0, 20) / 10 - 1
+        self.velocity_y = -2.5        # start velocity
+        self.size = random.randint(4, 7)
+        self.color = (255, 50, 50)
+    
+    def effect(self):
+        self.x += self.velocity_x
+        self.y += self.velocity_y
+        self.size -= 0.1
+        self.velocity_y += 0.1
+        
+    def draw(self, screen):
+        pygame.draw.circle(screen, self.color, (int(self.x), int(self.y)), int(self.size))
+
+class PlayerBreathParticle(PlayerDeathParticle):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.velocity_x = -2
+        self.velocity_y = random.randint(0, 20) / 10 - 1
+        self.color = (255,255,255)
+        # find diretion depending on velocities
+        self.direction = 1          # 1 right, 2 up, 3 left, 4, down
+        
+    def effect(self):
+        # change effect depending on direction
+        self.x += self.velocity_x
+        self.y += self.velocity_y
+        self.size -= 0.05
+        self.velocity_y += 0
+        
+class Particle(PlayerDeathParticle):
+    def __init__(self, x, y):
+        super().__init__(x, y)
+        self.velocity_x = random.randint(0, 20) / 10 - 1
+        self.velocity_y = random.randint(0, 20) / 10 - 1
+        self.size = random.randint(7, 10)
+        self.color = (255,random.choice([0,100]),0)
+        
+    def effect(self):
+        # change effect depending on direction
+        self.x += self.velocity_x
+        self.y += self.velocity_y
+        self.size -= 0.05
+        self.velocity_y += 0
+        
+    def movement(self, key_pressed):
+        if key_pressed[pygame.K_w]:
+            self.y += VEL
+        elif key_pressed[pygame.K_s]:
+            self.y -= VEL
+        if key_pressed[pygame.K_a]:
+            self.x += VEL
+        elif key_pressed[pygame.K_d]:
+            self.x -= VEL
+    
 class Background(object):
     def __init__(self, x, y):
         self.x = x
@@ -350,12 +383,19 @@ class Game(object):
         self.time = 0   # seconds
         self.font_size = 50
 
-    def draw_screen(self, player, bg, enemies, bullets, pickups):
+    def draw_screen(self, player, bg, enemies, bullets, pickups, player_particles, particles):
         bg.draw(screen)
         
         for pickup in pickups:
             pickup.draw(screen)
         
+        if player.health <= 0:
+            player_particles.append(PlayerDeathParticle(player.x, player.y))
+            for particle in player_particles:
+                particle.effect()
+                particle.draw(screen)
+                if particle.size <= 0:  
+                    player_particles.remove(particle)
         player.draw(screen)
         
         for enemy in enemies:
@@ -367,7 +407,22 @@ class Game(object):
         TEXT_FONT = pygame.font.SysFont('comicsans', self.font_size)
         time_seconds = TEXT_FONT.render("Time: " + str(self.time), 1, (255,255,255))
         screen.blit(time_seconds, (width/2 -  self.font_size/2, 10))
+        
+        # WARNING: change if max health changes
+        player_healthbar = player.health * 20
+        pygame.draw.rect(screen, (0,0,0), (8, 8, 204, 29))
+        pygame.draw.rect(screen, (255,0,0), (10, 10, player_healthbar, 25))
+        
+        player_expbar = int((player.exp / player.next_level)*200)
+        pygame.draw.rect(screen, (0,0,0), (SCREEN_WIDTH-212, 8, 200, 14))
+        pygame.draw.rect(screen, (0,200,230), (SCREEN_WIDTH-210, 10, player_expbar, 10))
             
+        for particle in particles:
+            particle.effect()
+            particle.draw(screen)
+            if particle.size <= 0:  
+                particles.remove(particle)
+
         pygame.display.update()
         
     def choose_enemy_spawn_points(self):
@@ -389,6 +444,8 @@ class Game(object):
         enemies = []     # create enemy list and make it work
         bullets = []
         pickups = []
+        player_particles = []
+        particles = []
         
         clock = pygame.time.get_ticks()
 
@@ -414,7 +471,7 @@ class Game(object):
         """ Main Game Loop """
         while True:
             self.clock.tick(60)
-            self.draw_screen(player, bg, enemies, bullets, pickups)
+            self.draw_screen(player, bg, enemies, bullets, pickups, player_particles, particles)
             
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -432,7 +489,7 @@ class Game(object):
                     if event.key == pygame.K_4:
                         enemy_spawn_speed = int(enemy_spawn_speed * 1.2)
                         pygame.time.set_timer(SPAWN_ENEMY, enemy_spawn_speed)
-                    
+                
                 if event.type == PLAYER_WALK_ANIMATION:
                     if player.index < 11:
                         player.index += 1
@@ -469,6 +526,10 @@ class Game(object):
 
                 if event.type == CLOCK:
                     self.time = int((pygame.time.get_ticks() - clock) / 1000)
+                    
+                if pygame.mouse.get_pressed()[0]:
+                    mx, my = pygame.mouse.get_pos()
+                    particles.append(Particle(mx, my))
                 
             key_pressed = pygame.key.get_pressed()     # Movement
             player.movement(key_pressed)
@@ -482,13 +543,11 @@ class Game(object):
                     enemies.remove(enemy)
                 if enemy.rect.colliderect(player):
                     player.collide(enemy.damage)
-                    print(f'Remaining health: {player.health}')
                     break
                     
             # handle bullets
             for bullet in bullets:
                 bullet.movement(key_pressed)
-                
                 for enemy in enemies:
                     if bullet.rect.colliderect(enemy):      # if bullet hit enemy       
                         enemy.health -= 1
@@ -499,12 +558,15 @@ class Game(object):
             # handle pickups
             for pickup in pickups:
                 pickup.movement(key_pressed)
-                
                 if pickup.rect.colliderect(player):
                     player.exp_gain(pickup.exp)
                     pickups.remove(pickup)
                     print("you picked up 5 exp")
                     break
+            
+            # handle particles
+            for particle in particles:
+                particle.movement(key_pressed)
 
 if __name__ == "__main__":
     Game(0).main(screen)
