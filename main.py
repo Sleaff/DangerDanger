@@ -317,7 +317,8 @@ class Particle(PlayerDeathParticle):
         self.velocity_x = random.randint(0, 20) / 10 - 1
         self.velocity_y = random.randint(0, 20) / 10 - 1
         self.size = random.randint(7, 10)
-        self.color = (255,random.choice([0,100]),0)
+        # self.color = (255,random.choice([0,100]),0)
+        self.color = (random.choice([0,255]),random.choice([0,255]),random.choice([0,255]))
         
     def effect(self):
         # change effect depending on direction
@@ -382,6 +383,8 @@ class Game(object):
         self.y = height / 2
         self.time = 0   # seconds
         self.font_size = 50
+        self.pause_clock = pygame.time.Clock()
+        self.pause_count = 0
 
     def draw_screen(self, player, bg, enemies, bullets, pickups, player_particles, particles):
         bg.draw(screen)
@@ -403,10 +406,16 @@ class Game(object):
             
         for bullet in bullets:
             bullet.draw(screen)
-            
+        
+        # game clock
         TEXT_FONT = pygame.font.SysFont('comicsans', self.font_size)
         time_seconds = TEXT_FONT.render("Time: " + str(self.time), 1, (255,255,255))
         screen.blit(time_seconds, (width/2 -  self.font_size/2, 10))
+        
+        # level display
+        LEVEL_FONT = pygame.font.SysFont('comicsans', int(self.font_size/2))
+        level = LEVEL_FONT.render("Level: " + str(player.level), 1, (255,255,255))
+        screen.blit(level, (SCREEN_WIDTH - 100, 50))
         
         # WARNING: change if max health changes
         player_healthbar = player.health * 20
@@ -425,6 +434,46 @@ class Game(object):
 
         pygame.display.update()
         
+    def draw_paused(self, screen):
+        self.pause_count
+        if self.pause_count < 50:
+            surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))  # the size of your rect
+            surface.set_alpha(5)                # alpha level
+            surface.fill((0,0,0))           # this fills the entire surface
+            screen.blit(surface, (0,0))    # (0,0) are the top-left coordinates
+            self.pause_count += 1
+        PAUSE_FONT = pygame.font.SysFont('comicsans', int(self.font_size*2))
+        pause = PAUSE_FONT.render("Paused", 1, (255,255,255))
+        screen.blit(pause, (SCREEN_WIDTH/2 - 125, SCREEN_HEIGHT/2 - 170))
+        pygame.display.update()
+        
+    def draw_lvlup(self, screen):
+        # surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))     # the size of your rect
+        # surface.set_alpha(200)          # alpha level
+        # surface.fill((0,0,0))           # this fills the entire surface
+        # screen.blit(surface, (0,0))     # (0,0) are the top-left coordinates
+
+        LVLUP_FONT = pygame.font.SysFont('comicsans', int(self.font_size*2))
+        pause = LVLUP_FONT.render("You Leveled up!", 1, (255,255,255))
+        screen.blit(pause, (SCREEN_WIDTH/2 - 125, SCREEN_HEIGHT/2 - 170))
+        pygame.display.update()
+        
+    def draw_menu(self, screen, bg):
+        bg.draw(screen)
+        surface = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT))
+        surface.set_alpha(200)
+        surface.fill((0,0,0))
+        screen.blit(surface, (0,0)) 
+
+        MENU_FONT = pygame.font.SysFont('comicsans', int(self.font_size*2))
+        menu = MENU_FONT.render("DangerDanger", 1, (255,255,255))
+        screen.blit(menu, (SCREEN_WIDTH/2 - 260, SCREEN_HEIGHT/2 - 170))
+        
+        START_FONT = pygame.font.SysFont('comicsans', int(self.font_size))
+        start = START_FONT.render("Press 'space' to start", 1, (255,255,255))
+        screen.blit(start, (SCREEN_WIDTH/2 - 180, SCREEN_HEIGHT/2))
+        pygame.display.update()
+
     def choose_enemy_spawn_points(self):
         rand = random.randint(1,4)
         if rand == 1:   # left boarder random point
@@ -438,6 +487,7 @@ class Game(object):
         return spawn
 
     def main(self, screen):
+        gamestate = 'MENU'
         player = Player(width / 2, height / 2, player_surface, player_surface_mirror,
                         player_walk_frames, player_walk_frames_mirror)
         bg = Background(width / 2, height / 2)
@@ -470,6 +520,51 @@ class Game(object):
 
         """ Main Game Loop """
         while True:
+            while gamestate == 'MENU':
+                self.pause_clock.tick(60)
+                self.draw_menu(screen, bg)
+                
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                        
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE and gamestate == 'MENU':
+                            gamestate = 'RUNNING'
+            
+            while gamestate == 'PAUSED':
+                self.pause_clock.tick(60)
+                self.draw_paused(screen)
+                
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                    
+                    if event.type == pygame.KEYDOWN and gamestate == 'PAUSED':
+                        if event.key == pygame.K_ESCAPE:
+                            gamestate = 'RUNNING'
+                            self.pause_count = 0
+                            
+                    if event.type == pygame.KEYDOWN and gamestate == 'LVLUP':
+                        if event.key == pygame.K_SPACE:
+                            gamestate = 'RUNNING'
+                            
+            while gamestate == 'LVLUP':
+                self.pause_clock.tick(60)
+                self.draw_lvlup(screen)
+                
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        sys.exit()
+                            
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_SPACE:
+                            player.change_attack_speed(AUTO_SHOOT, 0.8)
+                            gamestate = 'RUNNING'
+            
             self.clock.tick(60)
             self.draw_screen(player, bg, enemies, bullets, pickups, player_particles, particles)
             
@@ -489,6 +584,8 @@ class Game(object):
                     if event.key == pygame.K_4:
                         enemy_spawn_speed = int(enemy_spawn_speed * 1.2)
                         pygame.time.set_timer(SPAWN_ENEMY, enemy_spawn_speed)
+                    if event.key == pygame.K_ESCAPE and gamestate == 'RUNNING':
+                        gamestate = 'PAUSED'
                 
                 if event.type == PLAYER_WALK_ANIMATION:
                     if player.index < 11:
@@ -526,6 +623,9 @@ class Game(object):
 
                 if event.type == CLOCK:
                     self.time = int((pygame.time.get_ticks() - clock) / 1000)
+                    if enemy_spawn_speed < 0:
+                        enemy_spawn_speed = int(enemy_spawn_speed * 0.97)
+                    pygame.time.set_timer(SPAWN_ENEMY, enemy_spawn_speed)
                     
                 if pygame.mouse.get_pressed()[0]:
                     mx, my = pygame.mouse.get_pos()
@@ -552,14 +652,16 @@ class Game(object):
                     if bullet.rect.colliderect(enemy):      # if bullet hit enemy       
                         enemy.health -= 1
                         bullets.remove(bullet)
-                        player.exp_gain()
+                        if player.exp_gain():
+                            gamestate = 'LVLUP'
                         break       # makes sure i don't try to remove bullet that has already been removed
             
             # handle pickups
             for pickup in pickups:
                 pickup.movement(key_pressed)
                 if pickup.rect.colliderect(player):
-                    player.exp_gain(pickup.exp)
+                    if player.exp_gain(pickup.exp):
+                        gamestate = 'LVLUP'
                     pickups.remove(pickup)
                     print("you picked up 5 exp")
                     break
